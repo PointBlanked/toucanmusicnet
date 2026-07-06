@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toucan Music Project — Every child deserves a soundtrack</title>
+  <meta name="description" content="A nonprofit teaching music to underprivileged children. Free lessons, instruments, and stage time." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music Project</a>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html" aria-current="page">Home</a>
+      <a class="nav-link" href="calendar.html">Calendar</a>
+      <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow rise">A free music school for kids who'd never get one</p>
+    <h1 class="rise">Every child deserves <span class="lift">a soundtrack.</span></h1>
+    <p class="rise">Toucan Music Project puts real instruments in the hands of underprivileged children — with free weekly classes, a lending library, and a stage to play on. Taught by volunteers. Powered by neighbors like you.</p>
+    <div class="hero-cta rise">
+      <a class="btn btn-beak" href="signup.html">Join as a student or volunteer</a>
+      <a class="btn" href="calendar.html">See this week's classes</a>
+    </div>
+  </header>
+
+  <section class="section" id="programs">
+    <h2>What we run, week after week</h2>
+    <p class="lede">Every program is free for students. No auditions, no rental fees, no fine print — just show up.</p>
+    <div class="card-row">
+      <article class="card tilt">
+        <div class="glyph">🎻</div>
+        <h3>After-school ensembles</h3>
+        <p>Small-group classes in strings, percussion, and voice, twice a week. Kids learn by playing together from day one.</p>
+      </article>
+      <article class="card tilt">
+        <div class="glyph">🎺</div>
+        <h3>Instrument lending library</h3>
+        <p>Every student takes an instrument home for the season. Donated, repaired, and re-tuned by our volunteers.</p>
+      </article>
+      <article class="card tilt">
+        <div class="glyph">🎤</div>
+        <h3>Showcase nights</h3>
+        <p>Monthly performances for families and the neighborhood. The first stage most of our students ever stand on.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="volunteer">
+    <h2>How volunteering works</h2>
+    <p class="lede">You don't have to be a musician — we need helping hands at every class and event. Each calendar entry has a set number of volunteer spots, so you always know where you're actually needed.</p>
+    <div class="card-row">
+      <article class="card tilt">
+        <div class="glyph">1</div>
+        <h3>Make an account</h3>
+        <p>Sign up as a volunteer in under a minute. Students sign up the same way.</p>
+      </article>
+      <article class="card tilt">
+        <div class="glyph">2</div>
+        <h3>Pick from the calendar</h3>
+        <p>Open any class or event to see how many volunteer spots are left, and claim one.</p>
+      </article>
+      <article class="card tilt">
+        <div class="glyph">3</div>
+        <h3>Get reminded</h3>
+        <p>A weekly email with what's coming up, plus a nudge an hour and thirty minutes before each class. Adjustable in your settings.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="cta-band">
+      <div>
+        <h2>The next class is already on the calendar.</h2>
+        <p>Students grab a seat. Volunteers grab a spot. Either way, you're in the room where it happens.</p>
+      </div>
+      <a class="btn btn-beak" href="calendar.html">Open the calendar</a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>© 2026 Toucan Music Project · a 501(c)(3) nonprofit</span>
+    <span>hello@toucanmusic.org</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

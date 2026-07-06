@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — Toucan Music Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music Project</a>
+    <div class="nav-links">
+      <a class="nav-link" href="index.html">Home</a>
+      <a class="nav-link" href="calendar.html">Calendar</a>
+      <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
+    </div>
+  </nav>
+
+  <main class="auth-wrap wide">
+    <div class="panel rise">
+      <h1>Settings</h1>
+      <p class="sub" id="who">Notification preferences for your account.</p>
+
+      <div class="toggle-row">
+        <div>
+          <strong>Weekly schedule email</strong>
+          <p>Every Monday morning: the classes and events coming up this week, in one email.</p>
+        </div>
+        <span class="switch">
+          <input type="checkbox" id="pref-digest" aria-label="Weekly schedule email" />
+          <span class="track"></span>
+        </span>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <strong>Class reminders</strong>
+          <p>A nudge an hour before and thirty minutes before each upcoming class or event — by email, and on-screen while you have the site open.</p>
+        </div>
+        <span class="switch">
+          <input type="checkbox" id="pref-reminders" aria-label="Class reminders" />
+          <span class="track"></span>
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const user = await ToucanAPI.getSession();
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      document.getElementById("who").textContent =
+        "Notification preferences for " + user.name + " (" + user.role + ").";
+      const digest = document.getElementById("pref-digest");
+      const reminders = document.getElementById("pref-reminders");
+      digest.checked = user.weekly_digest !== false;
+      reminders.checked = user.class_reminders !== false;
+
+      async function save() {
+        try {
+          await ToucanAPI.updatePrefs({
+            weekly_digest: digest.checked,
+            class_reminders: reminders.checked,
+          });
+          toast("Preferences saved.");
+        } catch (ex) {
+          toast(ex.message, "error");
+        }
+      }
+      digest.addEventListener("change", save);
+      reminders.addEventListener("change", save);
+    });
+  </script>
+</body>
+</html>

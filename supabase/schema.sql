@@ -1,0 +1,152 @@
+-- Toucan Music Project — database schema
+-- Run this in the Supabase SQL editor (or `supabase db push`).
+
+-- ---------------------------------------------------------------- profiles
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  full_name text not null,
+  role text not null default 'student' check (role in ('student', 'volunteer', 'admin')),
+  weekly_digest boolean not null default true,
+  class_reminders boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Auto-create a profile when a user signs up; role/name come from the
+-- signup metadata sent by the site. Role is clamped so nobody can
+-- self-register as admin.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', 'Member'),
+    case
+      when new.raw_user_meta_data ->> 'role' = 'volunteer' then 'volunteer'
+      else 'student'
+    end
+  );
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- ------------------------------------------------------------------ events
+create table public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  event_type text not null default 'class' check (event_type in ('class', 'event')),
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  location text,
+  volunteer_capacity int not null default 0 check (volunteer_capacity >= 0),
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+-- ------------------------------------------------------- volunteer signups
+create table public.volunteer_signups (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events (id) on delete cascade,
+  volunteer_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (event_id, volunteer_id)
+);
+
+-- Capacity is enforced here, server-side, so the limit holds no matter
+-- what the client does. Rows are locked to avoid two volunteers racing
+-- for the last spot.
+create or replace function public.enforce_volunteer_capacity()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+declare
+  cap int;
+  taken int;
+begin
+  select volunteer_capacity into cap
+  from public.events where id = new.event_id for update;
+
+  if cap is null then
+    raise exception 'Event not found.';
+  end if;
+
+  select count(*) into taken
+  from public.volunteer_signups where event_id = new.event_id;
+
+  if taken >= cap then
+    raise exception 'All volunteer spots for this event are filled.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger check_volunteer_capacity
+  before insert on public.volunteer_signups
+  for each row execute function public.enforce_volunteer_capacity();
+
+-- Dedupe table for reminder emails (so a reminder is sent once per
+-- user/event/offset).
+create table public.reminders_sent (
+  event_id uuid not null references public.events (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  offset_minutes int not null,
+  sent_at timestamptz not null default now(),
+  primary key (event_id, user_id, offset_minutes)
+);
+
+-- --------------------------------------------------------------------- RLS
+alter table public.profiles enable row level security;
+alter table public.events enable row level security;
+alter table public.volunteer_signups enable row level security;
+alter table public.reminders_sent enable row level security;
+
+create policy "read own profile" on public.profiles
+  for select using (auth.uid() = id or public.is_admin());
+create policy "update own prefs" on public.profiles
+  for update using (auth.uid() = id)
+  with check (auth.uid() = id and role = (select role from public.profiles where id = auth.uid()));
+
+create policy "events readable by everyone" on public.events
+  for select using (true);
+create policy "admin manages events" on public.events
+  for all using (public.is_admin()) with check (public.is_admin());
+
+-- Spot counts are for volunteers and the admin only — students can't
+-- read the signups table at all.
+create policy "volunteers and admin read signups" on public.volunteer_signups
+  for select using (
+    public.is_admin()
+    or exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'volunteer'
+    )
+  );
+create policy "volunteers claim their own spot" on public.volunteer_signups
+  for insert with check (
+    volunteer_id = auth.uid()
+    and exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'volunteer'
+    )
+  );
+create policy "volunteers withdraw their own spot" on public.volunteer_signups
+  for delete using (volunteer_id = auth.uid() or public.is_admin());
+
+-- reminders_sent is written only by the service-role edge functions,
+-- which bypass RLS; no user-facing policies needed.
