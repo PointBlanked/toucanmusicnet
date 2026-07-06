@@ -1,8 +1,9 @@
 -- Toucan Music Project — database schema
 -- Run this in the Supabase SQL editor (or `supabase db push`).
+-- Safe to re-run: everything is idempotent.
 
 -- ---------------------------------------------------------------- profiles
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null,
   role text not null default 'student' check (role in ('student', 'volunteer', 'admin')),
@@ -11,30 +12,14 @@ create table public.profiles (
   created_at timestamptz not null default now()
 );
 
--- Auto-create a profile when a user signs up; role/name come from the
--- signup metadata sent by the site. Role is clamped so nobody can
--- self-register as admin.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql security definer set search_path = public
-as $$
-begin
-  insert into public.profiles (id, full_name, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', 'Member'),
-    case
-      when new.raw_user_meta_data ->> 'role' = 'volunteer' then 'volunteer'
-      else 'student'
-    end
-  );
-  return new;
-end;
-$$;
+-- Profiles are created by the site on first login (Supabase no longer
+-- allows user-defined triggers on auth.users). The insert policy below
+-- clamps self-created roles to student/volunteer, so nobody can make
+-- themselves admin; the admin profile is inserted manually (see README).
 
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute function public.handle_new_user();
+-- Clean up the old trigger approach if a previous version ran.
+drop trigger if exists on_auth_user_created on auth.users;
+drop function if exists public.handle_new_user();
 
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public
@@ -46,7 +31,7 @@ as $$
 $$;
 
 -- ------------------------------------------------------------------ events
-create table public.events (
+create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   description text,
@@ -60,7 +45,7 @@ create table public.events (
 );
 
 -- ------------------------------------------------------- volunteer signups
-create table public.volunteer_signups (
+create table if not exists public.volunteer_signups (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events (id) on delete cascade,
   volunteer_id uuid not null references public.profiles (id) on delete cascade,
@@ -96,13 +81,14 @@ begin
 end;
 $$;
 
+drop trigger if exists check_volunteer_capacity on public.volunteer_signups;
 create trigger check_volunteer_capacity
   before insert on public.volunteer_signups
   for each row execute function public.enforce_volunteer_capacity();
 
 -- Dedupe table for reminder emails (so a reminder is sent once per
 -- user/event/offset).
-create table public.reminders_sent (
+create table if not exists public.reminders_sent (
   event_id uuid not null references public.events (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
   offset_minutes int not null,
@@ -116,19 +102,33 @@ alter table public.events enable row level security;
 alter table public.volunteer_signups enable row level security;
 alter table public.reminders_sent enable row level security;
 
+drop policy if exists "read own profile" on public.profiles;
 create policy "read own profile" on public.profiles
   for select using (auth.uid() = id or public.is_admin());
+
+-- First-login profile creation; role is clamped so nobody self-registers
+-- as admin.
+drop policy if exists "create own profile" on public.profiles;
+create policy "create own profile" on public.profiles
+  for insert with check (
+    auth.uid() = id and role in ('student', 'volunteer')
+  );
+
+drop policy if exists "update own prefs" on public.profiles;
 create policy "update own prefs" on public.profiles
   for update using (auth.uid() = id)
   with check (auth.uid() = id and role = (select role from public.profiles where id = auth.uid()));
 
+drop policy if exists "events readable by everyone" on public.events;
 create policy "events readable by everyone" on public.events
   for select using (true);
+drop policy if exists "admin manages events" on public.events;
 create policy "admin manages events" on public.events
   for all using (public.is_admin()) with check (public.is_admin());
 
 -- Spot counts are for volunteers and the admin only — students can't
 -- read the signups table at all.
+drop policy if exists "volunteers and admin read signups" on public.volunteer_signups;
 create policy "volunteers and admin read signups" on public.volunteer_signups
   for select using (
     public.is_admin()
@@ -137,6 +137,7 @@ create policy "volunteers and admin read signups" on public.volunteer_signups
       where id = auth.uid() and role = 'volunteer'
     )
   );
+drop policy if exists "volunteers claim their own spot" on public.volunteer_signups;
 create policy "volunteers claim their own spot" on public.volunteer_signups
   for insert with check (
     volunteer_id = auth.uid()
@@ -145,6 +146,7 @@ create policy "volunteers claim their own spot" on public.volunteer_signups
       where id = auth.uid() and role = 'volunteer'
     )
   );
+drop policy if exists "volunteers withdraw their own spot" on public.volunteer_signups;
 create policy "volunteers withdraw their own spot" on public.volunteer_signups
   for delete using (volunteer_id = auth.uid() or public.is_admin());
 

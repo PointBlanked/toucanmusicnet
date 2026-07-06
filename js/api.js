@@ -89,10 +89,32 @@
     sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
   }
 
-  async function sbProfile(userId) {
-    const { data, error } = await sb.from("profiles").select("*").eq("id", userId).single();
+  // Fetch the profile, creating it on first login from the signup metadata
+  // (Supabase no longer allows triggers on auth.users, so this replaces the
+  // old on-signup trigger). The RLS insert policy clamps roles to
+  // student/volunteer.
+  async function sbProfile(authUser) {
+    const { data, error } = await sb
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
     if (error) throw error;
-    return data;
+    if (data) return data;
+
+    const meta = authUser.user_metadata || {};
+    const profile = {
+      id: authUser.id,
+      full_name: meta.full_name || "Member",
+      role: meta.role === "volunteer" ? "volunteer" : "student",
+    };
+    const { data: created, error: insErr } = await sb
+      .from("profiles")
+      .insert(profile)
+      .select()
+      .single();
+    if (insErr) throw insErr;
+    return created;
   }
 
   function publicUser(u) {
@@ -120,7 +142,7 @@
       }
       const { data } = await sb.auth.getSession();
       if (!data.session) return null;
-      const p = await sbProfile(data.session.user.id);
+      const p = await sbProfile(data.session.user);
       return publicUser({ ...p, email: data.session.user.email });
     },
 
@@ -143,7 +165,7 @@
         ident.toLowerCase() === (cfg.ADMIN_NAME || "admin") ? cfg.ADMIN_EMAIL : ident;
       const { data, error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
-      const p = await sbProfile(data.user.id);
+      const p = await sbProfile(data.user);
       return publicUser({ ...p, email: data.user.email });
     },
 

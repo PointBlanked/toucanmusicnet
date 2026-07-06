@@ -49,8 +49,10 @@ events, and volunteer signups live in your browser's localStorage.
    (auto-confirm on). Then promote it:
 
    ```sql
-   update public.profiles set role = 'admin', full_name = 'admin'
-   where id = (select id from auth.users where email = 'admin@toucanmusic.org');
+   insert into public.profiles (id, full_name, role)
+   select id, 'admin', 'admin' from auth.users
+   where email = 'admin@toucanmusic.org'
+   on conflict (id) do update set role = 'admin', full_name = 'admin';
    ```
 
    The login page maps the name `admin` to this email automatically.
