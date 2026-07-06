@@ -12,7 +12,7 @@ const supabase = createClient(
 );
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
-const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music Project <onboarding@resend.dev>";
+const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music <onboarding@resend.dev>";
 
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
@@ -70,7 +70,7 @@ Deno.serve(async () => {
 
   const html = (name: string) => `
     <div style="font-family:Helvetica,Arial,sans-serif;color:#16282d;max-width:560px">
-      <h2 style="margin-bottom:4px">This week at Toucan Music Project</h2>
+      <h2 style="margin-bottom:4px">This week at Toucan Music</h2>
       <p style="color:#46595e">Hi ${name} — here's what's coming up in the next seven days.</p>
       <table style="border-collapse:collapse;width:100%">${rows}</table>
       <p style="color:#46595e;font-size:13px;margin-top:20px">

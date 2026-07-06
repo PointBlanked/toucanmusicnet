@@ -15,7 +15,7 @@ const supabase = createClient(
 );
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
-const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music Project <onboarding@resend.dev>";
+const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music <onboarding@resend.dev>";
 
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {

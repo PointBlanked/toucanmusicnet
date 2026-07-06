@@ -1,4 +1,4 @@
-// Toucan Music Project — data layer.
+// Toucan Music — data layer.
 // Uses Supabase when js/config.js has real credentials; otherwise runs a
 // localStorage-backed demo so the whole site works without a backend.
 

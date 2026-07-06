@@ -1,4 +1,4 @@
-# Toucan Music Project
+# Toucan Music
 
 A classic HTML/CSS/JS site for a music nonprofit teaching underprivileged
 children — landing page, login/signup (student or volunteer), an editable

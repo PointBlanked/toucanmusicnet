@@ -1,4 +1,4 @@
-// Toucan Music Project — configuration
+// Toucan Music — configuration
 //
 // To connect a real Supabase backend, replace the two placeholder values
 // below with your project's URL and anon key (Project Settings → API).
