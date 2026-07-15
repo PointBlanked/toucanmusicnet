@@ -14,9 +14,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
-const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music <onboarding@resend.dev>";
 
+// Returns { ok, error } instead of swallowing failures — callers must not
+// count a message as sent unless Resend actually accepted it.
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -26,10 +28,21 @@ async function sendEmail(to: string, subject: string, html: string) {
     },
     body: JSON.stringify({ from: FROM, to, subject, html }),
   });
-  if (!res.ok) console.error("Resend error for", to, await res.text());
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("Resend error for", to, body);
+    return { ok: false, error: body };
+  }
+  return { ok: true };
 }
 
 Deno.serve(async () => {
+  if (!RESEND_KEY) {
+    return new Response(
+      JSON.stringify({ sent: 0, error: "RESEND_API_KEY secret is not set." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
   const now = Date.now();
   const maxOffset = Math.max(...OFFSETS_MINUTES);
 
@@ -51,6 +64,7 @@ Deno.serve(async () => {
   const emailById = new Map(userList.users.map((u) => [u.id, u.email]));
 
   let sent = 0;
+  const failures: { email: string; error: string }[] = [];
   for (const ev of events) {
     const minsUntil = (new Date(ev.starts_at).getTime() - now) / 60_000;
     // The offset this event currently qualifies for (largest first).
@@ -72,7 +86,7 @@ Deno.serve(async () => {
         .insert({ event_id: ev.id, user_id: p.id, offset_minutes: offset });
       if (dupErr) continue; // already sent this nudge
 
-      await sendEmail(
+      const result = await sendEmail(
         email,
         `Starting soon: ${ev.title} at ${when}`,
         `<div style="font-family:Helvetica,Arial,sans-serif;color:#16282d;max-width:560px">
@@ -85,11 +99,22 @@ Deno.serve(async () => {
           </p>
         </div>`
       );
-      sent++;
+      if (result.ok) {
+        sent++;
+      } else {
+        failures.push({ email, error: result.error! });
+        // The send failed but the dedupe row is already written; delete it
+        // so the next sweep (in 5 minutes) retries this user/event/offset
+        // instead of silently skipping them forever.
+        await supabase
+          .from("reminders_sent")
+          .delete()
+          .match({ event_id: ev.id, user_id: p.id, offset_minutes: offset });
+      }
     }
   }
 
-  return new Response(JSON.stringify({ sent }), {
+  return new Response(JSON.stringify({ sent, failed: failures.length, failures }), {
     headers: { "Content-Type": "application/json" },
   });
 });

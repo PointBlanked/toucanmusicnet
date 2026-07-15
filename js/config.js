@@ -1,10 +1,12 @@
 // Toucan Music — configuration
 //
-// To connect a real Supabase backend, replace the two placeholder values
-// below with your project's URL and anon key (Project Settings → API).
-// While they are placeholders, the site runs in local demo mode: accounts,
-// events, and volunteer signups are stored in this browser's localStorage,
-// and the admin account (name: admin / password: toucan2026) is pre-seeded.
+// Use only a Supabase publishable/anon key here. It is designed for browser
+// use and relies on the row-level policies in supabase/schema.sql. Never put
+// a secret key or service-role key in this file.
+//
+// On localhost the site runs in local demo mode: accounts, events, and
+// volunteer signups are stored in this browser's localStorage. The demo-only
+// admin account is documented in README.md.
 
 window.TOUCAN_CONFIG = {
   SUPABASE_URL: "https://vxjewlbbsdvhzpibkppg.supabase.co",

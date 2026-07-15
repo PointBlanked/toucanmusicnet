@@ -1,17 +1,22 @@
 // Toucan Music — data layer.
-// Uses Supabase when js/config.js has real credentials; otherwise runs a
-// localStorage-backed demo so the whole site works without a backend.
+// Uses Supabase when js/config.js has real credentials; localhost and missing
+// credentials run a localStorage-backed demo so the site works without a backend.
 
 (function () {
   const cfg = window.TOUCAN_CONFIG || {};
+  const localHosts = ["localhost", "127.0.0.1", "::1", ""];
+  const LOCAL_DEMO =
+    cfg.FORCE_DEMO === true ||
+    (cfg.FORCE_DEMO !== false && localHosts.includes(window.location.hostname));
   const DEMO =
+    LOCAL_DEMO ||
     !cfg.SUPABASE_URL ||
     cfg.SUPABASE_URL.includes("YOUR-PROJECT") ||
     !window.supabase;
 
   // ---------------------------------------------------------------- demo db
-  const DB_KEY = "toucan_db_v1";
-  const SESSION_KEY = "toucan_session_v1";
+  const DB_KEY = "toucan_db_v2";
+  const SESSION_KEY = "toucan_session_v2";
 
   function seedDb() {
     const now = new Date();
@@ -30,22 +35,58 @@
           weekly_digest: true,
           class_reminders: true,
         },
+        {
+          id: "vol-1",
+          name: "Maya Rivera",
+          email: "maya@example.com",
+          password: "toucan2026",
+          role: "volunteer",
+          weekly_digest: true,
+          class_reminders: true,
+        },
+        {
+          id: "vol-2",
+          name: "Jordan Lee",
+          email: "jordan@example.com",
+          password: "toucan2026",
+          role: "volunteer",
+          weekly_digest: true,
+          class_reminders: true,
+        },
+        {
+          id: "vol-3",
+          name: "Sam Patel",
+          email: "sam@example.com",
+          password: "toucan2026",
+          role: "volunteer",
+          weekly_digest: false,
+          class_reminders: true,
+        },
+        {
+          id: "student-1",
+          name: "Ari Chen",
+          email: "ari@example.com",
+          password: "toucan2026",
+          role: "student",
+          weekly_digest: true,
+          class_reminders: true,
+        },
       ],
       events: [
         {
           id: "ev-1",
           title: "Beginner strings ensemble",
-          description: "Violin and cello basics for ages 8–12. Instruments provided by the lending library.",
+          description: "Violin and cello basics for ages 8-12. Instruments are provided by the lending library.",
           event_type: "class",
           starts_at: day(1, 16, 0),
           ends_at: day(1, 17, 30),
-          location: "Room A — Community Center",
+          location: "Room A - Community Center",
           volunteer_capacity: 3,
         },
         {
           id: "ev-2",
           title: "Rhythm & percussion workshop",
-          description: "Hand drums, shakers, and body percussion. High energy — extra volunteer hands welcome.",
+          description: "Hand drums, shakers, and body percussion. High energy, with extra volunteer hands welcome.",
           event_type: "class",
           starts_at: day(3, 15, 30),
           ends_at: day(3, 17, 0),
@@ -54,6 +95,26 @@
         },
         {
           id: "ev-3",
+          title: "Voice and chorus rehearsal",
+          description: "A small-group singing class focused on confidence, breathing, and learning one showcase song.",
+          event_type: "class",
+          starts_at: day(4, 16, 30),
+          ends_at: day(4, 17, 45),
+          location: "Music Room B",
+          volunteer_capacity: 2,
+        },
+        {
+          id: "ev-4",
+          title: "Instrument lending library check-out",
+          description: "Students pick up season instruments. Volunteers help tune, label, and fit cases before families head home.",
+          event_type: "event",
+          starts_at: day(5, 13, 0),
+          ends_at: day(5, 15, 0),
+          location: "Library Annex",
+          volunteer_capacity: 5,
+        },
+        {
+          id: "ev-5",
           title: "Family showcase night",
           description: "Students perform what they've been working on this month. Open to families and friends.",
           event_type: "event",
@@ -62,8 +123,38 @@
           location: "Main Hall",
           volunteer_capacity: 6,
         },
+        {
+          id: "ev-6",
+          title: "Volunteer orientation",
+          description: "New volunteers learn how calendar signups, class reminders, and room support work.",
+          event_type: "event",
+          starts_at: day(8, 17, 30),
+          ends_at: day(8, 18, 30),
+          location: "Welcome Desk",
+          volunteer_capacity: 2,
+        },
+        {
+          id: "ev-7",
+          title: "Repair and retune night",
+          description: "Donated instruments get cleaned, repaired, and tuned before going back into student hands.",
+          event_type: "event",
+          starts_at: day(10, 18, 0),
+          ends_at: day(10, 20, 30),
+          location: "Workshop",
+          volunteer_capacity: 4,
+        },
       ],
-      signups: [], // { id, event_id, user_id, user_name }
+      signups: [
+        { id: "su-1", event_id: "ev-1", user_id: "vol-1", user_name: "Maya Rivera" },
+        { id: "su-2", event_id: "ev-1", user_id: "vol-2", user_name: "Jordan Lee" },
+        { id: "su-3", event_id: "ev-2", user_id: "vol-1", user_name: "Maya Rivera" },
+        { id: "su-4", event_id: "ev-3", user_id: "vol-2", user_name: "Jordan Lee" },
+        { id: "su-5", event_id: "ev-3", user_id: "vol-3", user_name: "Sam Patel" },
+        { id: "su-6", event_id: "ev-4", user_id: "vol-1", user_name: "Maya Rivera" },
+        { id: "su-7", event_id: "ev-5", user_id: "vol-2", user_name: "Jordan Lee" },
+        { id: "su-8", event_id: "ev-6", user_id: "vol-1", user_name: "Maya Rivera" },
+        { id: "su-9", event_id: "ev-6", user_id: "vol-3", user_name: "Sam Patel" },
+      ], // { id, event_id, user_id, user_name }
     };
   }
 
@@ -83,10 +174,36 @@
     return "id-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
   }
 
+  function demoSessionUser(db = loadDb()) {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const { userId } = JSON.parse(raw);
+      return db.users.find((user) => user.id === userId) || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function requireDemoAdmin() {
+    const db = loadDb();
+    const currentUser = demoSessionUser(db);
+    if (!currentUser || currentUser.role !== "admin") {
+      throw new Error("Admin access required.");
+    }
+    return { db, currentUser };
+  }
+
   // ------------------------------------------------------------- supabase
   let sb = null;
   if (!DEMO) {
     sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  }
+
+  async function requireSupabaseSession() {
+    const { data, error } = await sb.auth.getSession();
+    if (error || !data.session) throw new Error("Log in with an admin account to continue.");
+    return data.session.user;
   }
 
   // Fetch the profile, creating it on first login from the signup metadata
@@ -134,10 +251,7 @@
 
     async getSession() {
       if (DEMO) {
-        const raw = localStorage.getItem(SESSION_KEY);
-        if (!raw) return null;
-        const { userId } = JSON.parse(raw);
-        const u = loadDb().users.find((u) => u.id === userId);
+        const u = demoSessionUser();
         return u ? publicUser(u) : null;
       }
       const { data } = await sb.auth.getSession();
@@ -238,26 +352,32 @@
 
     async createEvent(ev) {
       if (DEMO) {
-        const db = loadDb();
-        const row = { id: uid(), ...ev };
+        const { db, currentUser } = requireDemoAdmin();
+        const row = { id: uid(), ...ev, created_by: currentUser.id };
         db.events.push(row);
         saveDb(db);
         return row;
       }
-      const { data, error } = await sb.from("events").insert(ev).select().single();
+      const authUser = await requireSupabaseSession();
+      const { data, error } = await sb
+        .from("events")
+        .insert({ ...ev, created_by: authUser.id })
+        .select()
+        .single();
       if (error) throw new Error(error.message);
       return data;
     },
 
     async updateEvent(id, ev) {
       if (DEMO) {
-        const db = loadDb();
+        const { db } = requireDemoAdmin();
         const i = db.events.findIndex((e) => e.id === id);
         if (i < 0) throw new Error("Event not found.");
         db.events[i] = { ...db.events[i], ...ev };
         saveDb(db);
         return db.events[i];
       }
+      await requireSupabaseSession();
       const { data, error } = await sb.from("events").update(ev).eq("id", id).select().single();
       if (error) throw new Error(error.message);
       return data;
@@ -265,13 +385,15 @@
 
     async deleteEvent(id) {
       if (DEMO) {
-        const db = loadDb();
+        const { db } = requireDemoAdmin();
+        if (!db.events.some((event) => event.id === id)) throw new Error("Event not found.");
         db.events = db.events.filter((e) => e.id !== id);
         db.signups = db.signups.filter((s) => s.event_id !== id);
         saveDb(db);
         return;
       }
-      const { error } = await sb.from("events").delete().eq("id", id);
+      await requireSupabaseSession();
+      const { error } = await sb.from("events").delete().eq("id", id).select("id").single();
       if (error) throw new Error(error.message);
     },
 
@@ -345,7 +467,8 @@
     // Admin only: who signed up.
     async listSignups(eventId) {
       if (DEMO) {
-        return loadDb().signups.filter((s) => s.event_id === eventId);
+        const { db } = requireDemoAdmin();
+        return db.signups.filter((s) => s.event_id === eventId);
       }
       const { data, error } = await sb
         .from("volunteer_signups")

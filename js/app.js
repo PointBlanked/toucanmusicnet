@@ -32,18 +32,21 @@
     } catch (e) {}
 
     if (user) {
+      const settingsCurrent = window.location.pathname.endsWith("/settings.html")
+        ? ' aria-current="page"'
+        : "";
       slot.innerHTML = `
         <span class="nav-user">${escapeHtml(user.name)} <em>· ${user.role}</em></span>
-        <a class="nav-link" href="settings.html">Settings</a>
-        <button class="btn btn-quiet" data-logout>Log out</button>`;
+        <a class="nav-icon-link" href="settings.html" aria-label="Settings" data-tooltip="Settings" data-tour="nav-settings"${settingsCurrent}><iconify-icon icon="pixelarticons:settings-cog" aria-hidden="true"></iconify-icon></a>
+        <button class="nav-icon-button" data-logout aria-label="Log out" data-tooltip="Log out"><iconify-icon icon="pixelarticons:logout" aria-hidden="true"></iconify-icon></button>`;
       slot.querySelector("[data-logout]").addEventListener("click", async () => {
         await api.logout();
         window.location.href = "index.html";
       });
     } else {
       slot.innerHTML = `
-        <a class="nav-link" href="login.html">Log in</a>
-        <a class="btn btn-beak btn-sm" href="signup.html">Join us</a>`;
+        <a class="nav-icon-link" href="login.html" aria-label="Log in" data-tooltip="Log in"><iconify-icon icon="pixelarticons:login" aria-hidden="true"></iconify-icon></a>
+        <a class="btn btn-beak btn-sm" href="signup.html"><iconify-icon icon="pixelarticons:user-plus" aria-hidden="true"></iconify-icon>Join us</a>`;
     }
     document.body.dataset.role = user ? user.role : "guest";
     return user;
@@ -111,6 +114,7 @@
     const user = await renderNav();
     initTilt();
     document.body.classList.add("ready");
+    window.ToucanTour?.maybeAutoStart(user);
     checkReminders(user);
     setInterval(() => checkReminders(user), 5 * 60 * 1000);
 

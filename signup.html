@@ -7,14 +7,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js" defer></script>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <nav class="nav">
     <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
     <div class="nav-links">
-      <a class="nav-link" href="index.html">Home</a>
-      <a class="nav-link" href="calendar.html">Calendar</a>
+      <a class="nav-icon-link" href="index.html" aria-label="Home" data-tooltip="Home"><iconify-icon icon="pixelarticons:home" aria-hidden="true"></iconify-icon></a>
+      <a class="nav-icon-link" href="calendar.html?v=2" aria-label="Calendar" data-tooltip="Calendar"><iconify-icon icon="pixelarticons:calendar" aria-hidden="true"></iconify-icon></a>
       <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
     </div>
   </nav>
@@ -29,13 +30,13 @@
           <legend class="sr-only" style="position:absolute;left:-9999px">Choose your role</legend>
           <label class="role-card">
             <input type="radio" name="role" value="student" required />
-            <span class="glyph role-mark role-mark-student" aria-hidden="true"></span>
+            <span class="glyph pixel-role-icon" aria-hidden="true"><iconify-icon icon="pixelarticons:user"></iconify-icon></span>
             <strong>I'm a student</strong>
             <span>Take free classes, borrow an instrument, and play in showcase nights.</span>
           </label>
           <label class="role-card">
             <input type="radio" name="role" value="volunteer" />
-            <span class="glyph role-mark role-mark-volunteer" aria-hidden="true"></span>
+            <span class="glyph pixel-role-icon" aria-hidden="true"><iconify-icon icon="pixelarticons:hand"></iconify-icon></span>
             <strong>I'm a volunteer</strong>
             <span>Claim open volunteer spots on classes and events, and see how many are left.</span>
           </label>
@@ -62,7 +63,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/api.js"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/background.js"></script>
   <script src="js/app.js"></script>
   <script>
@@ -80,13 +82,16 @@
       btn.disabled = true;
       btn.textContent = "Creating account…";
       try {
-        await ToucanAPI.signup({
+        const user = await ToucanAPI.signup({
           name: document.getElementById("name").value.trim(),
           email: document.getElementById("email").value.trim(),
           password: document.getElementById("password").value,
           role: role.value,
         });
-        window.location.href = "calendar.html";
+        ToucanTour.queueFirstVisit(user);
+        btn.textContent = "Account created";
+        await musicNoteConfetti(btn);
+        window.location.href = "calendar.html?v=2";
       } catch (ex) {
         err.textContent = ex.message;
         err.classList.add("show");

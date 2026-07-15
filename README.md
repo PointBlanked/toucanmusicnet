@@ -15,14 +15,22 @@ python3 -m http.server 8080
 # open http://localhost:8080
 ```
 
-Until you add Supabase credentials, the site runs in **demo mode**: accounts,
-events, and volunteer signups live in your browser's localStorage.
+On localhost, the site runs in **demo mode**: accounts, events, and volunteer
+signups live in your browser's localStorage. The seed data includes example
+classes, showcase/lending-library events, and a few claimed volunteer spots.
 
-- **Admin login:** name `admin`, password `toucan2026` (on the login page)
+- **Demo admin login:** name `admin`, password `toucan2026` (on the login page)
+- **Volunteer login:** `maya@example.com`, `jordan@example.com`, or
+  `sam@example.com`, password `toucan2026`
+- **Student login:** `ari@example.com`, password `toucan2026`
 - Sign up as a **volunteer** to claim spots on events; as a **student** to
   just see the schedule.
 - The admin can create/edit/delete events and set the number of volunteer
   spots per event.
+
+Demo credentials and localStorage are for local testing only. They are not a
+production security boundary. A deployed site uses Supabase Auth and the
+row-level policies in `supabase/schema.sql` for admin-only event changes.
 
 ## Pages
 
@@ -31,7 +39,7 @@ events, and volunteer signups live in your browser's localStorage.
 | `index.html` | Landing page — mission, programs, how volunteering works |
 | `login.html` | Log in with email (the admin logs in with the name `admin`) |
 | `signup.html` | Create an account; choose **student** or **volunteer** |
-| `calendar.html` | Month calendar. Everyone sees events; volunteers see spots left and can sign up within the admin-set volume; the admin creates/edits events and sees who signed up |
+| `calendar.html` | Selectable month calendar with a full day-details panel. Everyone sees events; volunteers see spots left and can sign up; the admin creates, edits, and deletes events and sees who signed up |
 | `settings.html` | Per-user toggles: weekly schedule email, class reminders |
 
 ## Going live with Supabase
@@ -45,7 +53,8 @@ events, and volunteer signups live in your browser's localStorage.
    server-side (so the spot limit holds even against a modified client).
 
 3. **Create the admin account**: in Dashboard → Authentication → Users →
-   *Add user*, create `admin@toucanmusic.org` with password `toucan2026`
+   *Add user*, create `admin@toucanmusic.org` with a unique password from a
+   password manager
    (auto-confirm on). Then promote it:
 
    ```sql
@@ -55,8 +64,10 @@ events, and volunteer signups live in your browser's localStorage.
    on conflict (id) do update set role = 'admin', full_name = 'admin';
    ```
 
-   The login page maps the name `admin` to this email automatically.
-   ⚠️ Change this password before real use — it's written down in your spec.
+   The login page maps the name `admin` to this email automatically. Never
+   commit or share this production password. Do not place a Supabase secret
+   or service-role key in `js/config.js`; that file must contain only the
+   browser-safe publishable key.
 
 4. **Emails** — sign up at [resend.com](https://resend.com) (or swap the
    `fetch` call in the functions for any provider), then deploy the two edge

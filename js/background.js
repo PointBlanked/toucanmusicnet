@@ -50,7 +50,7 @@
     const scroll = window.scrollY;
     host.querySelectorAll(".silk-layer").forEach((el) => {
       const d = parseFloat(el.dataset.depth);
-      el.style.transform = `translate3d(${px * 24 * d}px, ${py * 14 * d - scroll * d * 0.12}px, 0)`;
+      el.style.transform = `translate3d(${px * 38 * d}px, ${py * 24 * d - scroll * d * 0.17}px, 0)`;
     });
     if (Math.abs(targetX - px) > 0.001 || Math.abs(targetY - py) > 0.001) queue();
   }

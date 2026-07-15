@@ -30,6 +30,11 @@ as $$
   );
 $$;
 
+-- Only signed-in users may invoke the role check. The browser uses a
+-- publishable key; authorization still happens here against auth.uid().
+revoke execute on function public.is_admin() from public, anon;
+grant execute on function public.is_admin() to authenticated;
+
 -- ------------------------------------------------------------------ events
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
@@ -104,34 +109,45 @@ alter table public.reminders_sent enable row level security;
 
 drop policy if exists "read own profile" on public.profiles;
 create policy "read own profile" on public.profiles
-  for select using (auth.uid() = id or public.is_admin());
+  for select to authenticated using (auth.uid() = id or (select public.is_admin()));
 
 -- First-login profile creation; role is clamped so nobody self-registers
 -- as admin.
 drop policy if exists "create own profile" on public.profiles;
 create policy "create own profile" on public.profiles
-  for insert with check (
+  for insert to authenticated with check (
     auth.uid() = id and role in ('student', 'volunteer')
   );
 
 drop policy if exists "update own prefs" on public.profiles;
 create policy "update own prefs" on public.profiles
-  for update using (auth.uid() = id)
+  for update to authenticated using (auth.uid() = id)
   with check (auth.uid() = id and role = (select role from public.profiles where id = auth.uid()));
 
 drop policy if exists "events readable by everyone" on public.events;
 create policy "events readable by everyone" on public.events
-  for select using (true);
+  for select to anon, authenticated using (true);
 drop policy if exists "admin manages events" on public.events;
-create policy "admin manages events" on public.events
-  for all using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "admin creates events" on public.events;
+create policy "admin creates events" on public.events
+  for insert to authenticated
+  with check ((select public.is_admin()) and created_by = (select auth.uid()));
+drop policy if exists "admin updates events" on public.events;
+create policy "admin updates events" on public.events
+  for update to authenticated
+  using ((select public.is_admin()))
+  with check ((select public.is_admin()));
+drop policy if exists "admin deletes events" on public.events;
+create policy "admin deletes events" on public.events
+  for delete to authenticated
+  using ((select public.is_admin()));
 
 -- Spot counts are for volunteers and the admin only — students can't
 -- read the signups table at all.
 drop policy if exists "volunteers and admin read signups" on public.volunteer_signups;
 create policy "volunteers and admin read signups" on public.volunteer_signups
-  for select using (
-    public.is_admin()
+  for select to authenticated using (
+    (select public.is_admin())
     or exists (
       select 1 from public.profiles
       where id = auth.uid() and role = 'volunteer'
@@ -139,7 +155,7 @@ create policy "volunteers and admin read signups" on public.volunteer_signups
   );
 drop policy if exists "volunteers claim their own spot" on public.volunteer_signups;
 create policy "volunteers claim their own spot" on public.volunteer_signups
-  for insert with check (
+  for insert to authenticated with check (
     volunteer_id = auth.uid()
     and exists (
       select 1 from public.profiles
@@ -148,7 +164,7 @@ create policy "volunteers claim their own spot" on public.volunteer_signups
   );
 drop policy if exists "volunteers withdraw their own spot" on public.volunteer_signups;
 create policy "volunteers withdraw their own spot" on public.volunteer_signups
-  for delete using (volunteer_id = auth.uid() or public.is_admin());
+  for delete to authenticated using (volunteer_id = auth.uid() or (select public.is_admin()));
 
 -- reminders_sent is written only by the service-role edge functions,
 -- which bypass RLS; no user-facing policies needed.

@@ -7,14 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.7.0/dist/driver.css" />
+  <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js" defer></script>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <nav class="nav">
     <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
     <div class="nav-links">
-      <a class="nav-link" href="index.html">Home</a>
-      <a class="nav-link" href="calendar.html" aria-current="page">Calendar</a>
+      <a class="nav-icon-link" href="index.html" aria-label="Home" data-tooltip="Home"><iconify-icon icon="pixelarticons:home" aria-hidden="true"></iconify-icon></a>
+      <a class="nav-icon-link" href="calendar.html?v=2" aria-current="page" aria-label="Calendar" data-tooltip="Calendar"><iconify-icon icon="pixelarticons:calendar" aria-hidden="true"></iconify-icon></a>
       <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
     </div>
   </nav>
@@ -22,36 +24,37 @@
   <main class="cal-page">
     <div class="cal-head rise">
       <h1>Classes &amp; events</h1>
-      <button class="btn btn-sm" id="prev" aria-label="Previous month">←</button>
+      <button class="btn btn-sm icon-btn" id="prev" aria-label="Previous month" data-tooltip="Previous month"><iconify-icon icon="pixelarticons:chevron-left" aria-hidden="true"></iconify-icon></button>
       <span class="cal-title" id="cal-title"></span>
-      <button class="btn btn-sm" id="next" aria-label="Next month">→</button>
-      <button class="btn btn-beak btn-sm" id="new-event" hidden>+ New event</button>
+      <button class="btn btn-sm icon-btn" id="next" aria-label="Next month" data-tooltip="Next month"><iconify-icon icon="pixelarticons:chevron-right" aria-hidden="true"></iconify-icon></button>
+      <button class="btn btn-beak btn-sm" id="new-event" hidden><iconify-icon icon="pixelarticons:calendar-plus" aria-hidden="true"></iconify-icon>New event</button>
     </div>
 
-    <div class="cal-grid rise" id="cal-grid" aria-label="Monthly calendar"></div>
+    <div class="calendar-layout">
+      <section class="calendar-main rise" aria-label="Monthly calendar">
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <span class="k-class"><i></i>Class</span>
+          <span class="k-event"><i></i>Event</span>
+        </div>
+      </section>
 
-    <div class="cal-legend rise">
-      <span class="k-class"><i></i>Class</span>
-      <span class="k-event"><i></i>Event</span>
+      <aside class="day-panel rise" id="day-panel" aria-live="polite">
+        <div class="day-panel-head">
+          <span class="day-panel-icon" aria-hidden="true"><iconify-icon icon="pixelarticons:calendar"></iconify-icon></span>
+          <div>
+            <p class="day-panel-kicker">Selected day</p>
+            <h2 id="selected-day-title"></h2>
+          </div>
+        </div>
+        <div class="day-panel-toolbar">
+          <p id="selected-day-summary"></p>
+          <button class="btn btn-beak btn-sm" id="day-new-event" hidden><iconify-icon icon="pixelarticons:calendar-plus" aria-hidden="true"></iconify-icon>Add event</button>
+        </div>
+        <div class="day-event-list" id="day-event-list"></div>
+      </aside>
     </div>
   </main>
-
-  <!-- event details -->
-  <div class="modal-backdrop" id="detail-backdrop">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="d-title">
-      <h2 id="d-title"></h2>
-      <p class="when" id="d-when"></p>
-      <p class="meta" id="d-location"></p>
-      <p id="d-description"></p>
-      <div id="d-volunteer" style="margin-top:1.2rem"></div>
-      <div id="d-roster" style="margin-top:1rem"></div>
-      <div class="modal-actions">
-        <button class="btn btn-quiet" data-close>Close</button>
-        <button class="btn btn-sm" id="d-edit" hidden>Edit</button>
-        <button class="btn btn-sm btn-danger" id="d-delete" hidden>Delete</button>
-      </div>
-    </div>
-  </div>
 
   <!-- admin: create / edit event -->
   <div class="modal-backdrop" id="edit-backdrop">
@@ -101,7 +104,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/api.js"></script>
+  <script src="js/api.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.7.0/dist/driver.js.iife.js"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/background.js"></script>
   <script src="js/app.js"></script>
   <script src="js/calendar.js"></script>

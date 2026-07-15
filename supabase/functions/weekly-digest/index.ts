@@ -11,9 +11,11 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! // service role: bypasses RLS
 );
 
-const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music <onboarding@resend.dev>";
 
+// Returns { ok, error } instead of swallowing failures — callers must not
+// count a message as sent unless Resend actually accepted it.
 async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -23,10 +25,21 @@ async function sendEmail(to: string, subject: string, html: string) {
     },
     body: JSON.stringify({ from: FROM, to, subject, html }),
   });
-  if (!res.ok) console.error("Resend error for", to, await res.text());
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("Resend error for", to, body);
+    return { ok: false, error: body };
+  }
+  return { ok: true };
 }
 
 Deno.serve(async () => {
+  if (!RESEND_KEY) {
+    return new Response(
+      JSON.stringify({ sent: 0, error: "RESEND_API_KEY secret is not set." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
   const now = new Date();
   const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
@@ -80,14 +93,21 @@ Deno.serve(async () => {
     </div>`;
 
   let sent = 0;
+  const failures: { email: string; error: string }[] = [];
   for (const p of profiles ?? []) {
     const email = emailById.get(p.id);
     if (!email) continue;
-    await sendEmail(email, "Your Toucan week: upcoming classes & events", html(p.full_name));
-    sent++;
+    const result = await sendEmail(
+      email,
+      "Your Toucan week: upcoming classes & events",
+      html(p.full_name)
+    );
+    if (result.ok) sent++;
+    else failures.push({ email, error: result.error! });
   }
 
-  return new Response(JSON.stringify({ sent, events: events.length }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ sent, failed: failures.length, failures, events: events.length }),
+    { headers: { "Content-Type": "application/json" } }
+  );
 });

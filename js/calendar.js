@@ -1,72 +1,111 @@
-// Calendar page: month grid, event details, volunteer signup with capacity,
-// admin create/edit/delete.
+// Calendar page: selectable month grid, a persistent day-details panel,
+// volunteer signup, and admin event management.
 
 (function () {
   const api = window.ToucanAPI;
+  const $ = (sel) => document.querySelector(sel);
 
   let user = null;
   let events = [];
-  let current = new Date(); // month being shown
-  let editingId = null; // event id when editing, null when creating
+  let current = new Date();
+  let selectedDate = new Date();
+  let editingId = null;
+  let panelRenderId = 0;
 
-  const $ = (sel) => document.querySelector(sel);
   const grid = $("#cal-grid");
   const title = $("#cal-title");
-
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const DOWS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const DOWS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const fmtTime = (iso) =>
     new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
   const fmtRange = (ev) => {
-    const s = new Date(ev.starts_at);
-    return (
-      s.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" }) +
-      " · " + fmtTime(ev.starts_at) + (ev.ends_at ? "–" + fmtTime(ev.ends_at) : "")
-    );
-  };
-  // datetime-local wants "YYYY-MM-DDTHH:MM" in local time
-  const toLocalInput = (iso) => {
-    const d = new Date(iso);
-    const p = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    const start = fmtTime(ev.starts_at);
+    return ev.ends_at ? `${start} - ${fmtTime(ev.ends_at)}` : start;
   };
 
-  // ------------------------------------------------------------ month grid
+  const sameDay = (left, right) =>
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+
+  const eventsForDate = (date) =>
+    events.filter((ev) => sameDay(new Date(ev.starts_at), date));
+
+  const toLocalInput = (dateOrIso) => {
+    const date = dateOrIso instanceof Date ? dateOrIso : new Date(dateOrIso);
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function selectDate(date) {
+    selectedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    current = new Date(date.getFullYear(), date.getMonth(), 1);
+    render();
+  }
+
   function render() {
-    const y = current.getFullYear();
-    const m = current.getMonth();
-    title.textContent = MONTHS[m] + " " + y;
-
-    grid.innerHTML = DOWS.map((d) => `<div class="cal-dow">${d}</div>`).join("");
-
-    const firstDow = new Date(y, m, 1).getDay();
-    const days = new Date(y, m + 1, 0).getDate();
+    const year = current.getFullYear();
+    const month = current.getMonth();
     const today = new Date();
+    title.textContent = `${MONTHS[month]} ${year}`;
+    grid.innerHTML = "";
 
-    for (let i = 0; i < firstDow; i++) {
-      grid.insertAdjacentHTML("beforeend", `<div class="cal-cell pad"></div>`);
+    DOWS.forEach((day) => grid.appendChild(element("div", "cal-dow", day)));
+
+    const firstDow = new Date(year, month, 1).getDay();
+    const days = new Date(year, month + 1, 0).getDate();
+    for (let i = 0; i < firstDow; i += 1) {
+      const pad = element("div", "cal-cell pad");
+      pad.setAttribute("aria-hidden", "true");
+      grid.appendChild(pad);
     }
-    for (let d = 1; d <= days; d++) {
-      const isToday =
-        d === today.getDate() && m === today.getMonth() && y === today.getFullYear();
-      const cell = document.createElement("div");
-      cell.className = "cal-cell" + (isToday ? " today" : "");
-      cell.innerHTML = `<span class="d">${d}</span>`;
 
-      const dayEvents = events.filter((ev) => {
-        const s = new Date(ev.starts_at);
-        return s.getFullYear() === y && s.getMonth() === m && s.getDate() === d;
-      });
-      for (const ev of dayEvents) {
-        const chip = document.createElement("button");
-        chip.className = "chip " + (ev.event_type === "class" ? "class" : "");
-        chip.textContent = fmtTime(ev.starts_at) + " " + ev.title;
-        chip.addEventListener("click", () => openDetail(ev));
+    for (let day = 1; day <= days; day += 1) {
+      const date = new Date(year, month, day);
+      const dayEvents = eventsForDate(date);
+      const cell = element("div", "cal-cell");
+      if (sameDay(date, today)) cell.classList.add("today");
+      if (sameDay(date, selectedDate)) cell.classList.add("selected");
+      cell.setAttribute("role", "button");
+      cell.setAttribute("tabindex", "0");
+      cell.setAttribute(
+        "aria-label",
+        `${date.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`
+      );
+      cell.appendChild(element("span", "d", String(day)));
+
+      dayEvents.forEach((ev) => {
+        const chip = element(
+          "span",
+          `chip ${ev.event_type === "class" ? "class" : "event"}`,
+          `${fmtTime(ev.starts_at)} ${ev.title}`
+        );
         cell.appendChild(chip);
-      }
+      });
+
+      cell.addEventListener("click", () => selectDate(date));
+      cell.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectDate(date);
+        }
+      });
       grid.appendChild(cell);
     }
+
+    renderDayPanel();
   }
 
   async function refresh() {
@@ -74,92 +113,150 @@
     render();
   }
 
-  // ---------------------------------------------------------- detail modal
-  async function openDetail(ev) {
-    $("#d-title").textContent = ev.title;
-    $("#d-when").textContent = fmtRange(ev);
-    $("#d-location").textContent = ev.location || "";
-    $("#d-description").textContent = ev.description || "";
-
-    const vol = $("#d-volunteer");
-    const roster = $("#d-roster");
-    vol.innerHTML = "";
-    roster.innerHTML = "";
-
-    const isAdmin = user && user.role === "admin";
-    const isVolunteer = user && user.role === "volunteer";
-    $("#d-edit").hidden = !isAdmin;
-    $("#d-delete").hidden = !isAdmin;
-
-    // Spots remaining is visible to volunteers (and the admin) only.
-    if ((isVolunteer || isAdmin) && ev.volunteer_capacity > 0) {
-      const { count, mine } = await api.signupStatus(ev.id, user);
-      const left = Math.max(0, ev.volunteer_capacity - count);
-      vol.innerHTML = `
-        <span class="spots ${left === 0 ? "full" : ""}"><i></i>
-          ${left === 0 ? "All volunteer spots filled" : `${left} of ${ev.volunteer_capacity} volunteer spot${ev.volunteer_capacity === 1 ? "" : "s"} left`}
-        </span>`;
-      if (isVolunteer) {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-sm " + (mine ? "btn-quiet" : "btn-beak");
-        btn.style.marginLeft = "0.8rem";
-        btn.textContent = mine ? "Withdraw my spot" : "Volunteer for this";
-        btn.disabled = !mine && left === 0;
-        btn.addEventListener("click", async () => {
-          btn.disabled = true;
-          try {
-            if (mine) {
-              await api.volunteerCancel(ev.id, user);
-              toast("You've withdrawn from “" + ev.title + "”.");
-            } else {
-              await api.volunteerSignup(ev.id, user);
-              toast("You're signed up for “" + ev.title + "”. See you there!", "beak");
-            }
-            openDetail(ev); // re-render with fresh counts
-          } catch (ex) {
-            toast(ex.message, "error");
-            btn.disabled = false;
-          }
-        });
-        vol.appendChild(btn);
-      }
-      if (isAdmin) {
-        const names = await api.listSignups(ev.id);
-        roster.innerHTML =
-          `<p class="hint"><strong>Signed up:</strong> ` +
-          (names.length ? names.map((n) => escapeHtml(n.user_name)).join(", ") : "no one yet") +
-          `</p>`;
-      }
-    } else if (isVolunteer && !ev.volunteer_capacity) {
-      vol.innerHTML = `<p class="hint">No volunteer spots for this one.</p>`;
-    } else if (!user) {
-      vol.innerHTML = `<p class="hint"><a href="login.html">Log in</a> as a volunteer to see and claim open spots.</p>`;
-    }
-
-    $("#d-edit").onclick = () => {
-      closeModals();
-      openEditor(ev);
-    };
-    $("#d-delete").onclick = async () => {
-      if (!confirm(`Delete “${ev.title}”? Volunteer signups for it are removed too.`)) return;
-      await api.deleteEvent(ev.id);
-      closeModals();
-      toast("Event deleted.");
-      refresh();
-    };
-
-    $("#detail-backdrop").classList.add("open");
+  function addMetaRow(parent, iconName, text) {
+    if (!text) return;
+    const row = element("p", "day-event-meta");
+    const icon = document.createElement("iconify-icon");
+    icon.setAttribute("icon", iconName);
+    icon.setAttribute("aria-hidden", "true");
+    row.append(icon, document.createTextNode(text));
+    parent.appendChild(row);
   }
 
-  // ---------------------------------------------------------- admin editor
+  async function renderDayPanel() {
+    const renderId = ++panelRenderId;
+    const dayEvents = eventsForDate(selectedDate);
+    $("#selected-day-title").textContent = selectedDate.toLocaleDateString([], {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
+    $("#selected-day-summary").textContent = dayEvents.length
+      ? `${dayEvents.length} scheduled event${dayEvents.length === 1 ? "" : "s"}`
+      : "Nothing scheduled";
+
+    const list = $("#day-event-list");
+    list.innerHTML = "";
+    if (!dayEvents.length) {
+      const empty = element("div", "day-empty");
+      const icon = document.createElement("iconify-icon");
+      icon.setAttribute("icon", "pixelarticons:calendar");
+      icon.setAttribute("aria-hidden", "true");
+      empty.append(icon, element("p", "", "Select another day, or add an event here."));
+      list.appendChild(empty);
+      return;
+    }
+
+    for (const ev of dayEvents) {
+      const item = element("article", "day-event-item");
+      const heading = element("div", "day-event-heading");
+      const type = element("span", `event-type ${ev.event_type}`, ev.event_type);
+      heading.append(type, element("h3", "", ev.title));
+      item.appendChild(heading);
+      addMetaRow(item, "pixelarticons:clock", fmtRange(ev));
+      addMetaRow(item, "pixelarticons:map", ev.location || "Location to be announced");
+      if (ev.description) item.appendChild(element("p", "day-event-description", ev.description));
+
+      const isAdmin = user && user.role === "admin";
+      const isVolunteer = user && user.role === "volunteer";
+      if ((isAdmin || isVolunteer) && ev.volunteer_capacity > 0) {
+        try {
+          const { count, mine } = await api.signupStatus(ev.id, user);
+          if (renderId !== panelRenderId) return;
+          const left = Math.max(0, ev.volunteer_capacity - count);
+          const volunteerRow = element("div", "day-volunteer-row");
+          const spots = element(
+            "span",
+            `spots${left === 0 ? " full" : ""}`,
+            `${left}/${ev.volunteer_capacity} volunteer spot${ev.volunteer_capacity === 1 ? "" : "s"} left`
+          );
+          volunteerRow.appendChild(spots);
+
+          if (isVolunteer) {
+            const signup = element(
+              "button",
+              `btn btn-sm ${mine ? "btn-quiet" : "btn-beak"}`,
+              mine ? "Withdraw" : "Volunteer"
+            );
+            signup.disabled = !mine && left === 0;
+            signup.addEventListener("click", async () => {
+              signup.disabled = true;
+              try {
+                if (mine) {
+                  await api.volunteerCancel(ev.id, user);
+                  toast(`You have withdrawn from "${ev.title}".`);
+                } else {
+                  await api.volunteerSignup(ev.id, user);
+                  toast(`You are signed up for "${ev.title}".`, "beak");
+                }
+                renderDayPanel();
+              } catch (error) {
+                toast(error.message, "error");
+                signup.disabled = false;
+              }
+            });
+            volunteerRow.appendChild(signup);
+          }
+          item.appendChild(volunteerRow);
+
+          if (isAdmin) {
+            const names = await api.listSignups(ev.id);
+            if (renderId !== panelRenderId) return;
+            item.appendChild(
+              element(
+                "p",
+                "day-roster",
+                names.length
+                  ? `Signed up: ${names.map((entry) => entry.user_name).join(", ")}`
+                  : "Signed up: no one yet"
+              )
+            );
+          }
+        } catch (error) {
+          item.appendChild(element("p", "day-panel-error", error.message));
+        }
+      } else if (isVolunteer) {
+        item.appendChild(element("p", "day-roster", "No volunteer spots for this event."));
+      }
+
+      if (isAdmin) {
+        const actions = element("div", "day-event-actions");
+        const edit = element("button", "btn btn-sm btn-quiet", "Edit");
+        const remove = element("button", "btn btn-sm btn-danger", "Delete");
+        edit.addEventListener("click", () => openEditor(ev));
+        remove.addEventListener("click", async () => {
+          if (!confirm(`Delete "${ev.title}"? Volunteer signups for it will also be removed.`)) return;
+          remove.disabled = true;
+          try {
+            await api.deleteEvent(ev.id);
+            toast("Event deleted.");
+            await refresh();
+          } catch (error) {
+            toast(error.message, "error");
+            remove.disabled = false;
+          }
+        });
+        actions.append(edit, remove);
+        item.appendChild(actions);
+      }
+      list.appendChild(item);
+    }
+  }
+
   function openEditor(ev) {
     editingId = ev ? ev.id : null;
-    $("#e-title").textContent = ev ? "Edit event" : "New event";
+    const defaultStart = new Date(
+      selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 16, 0
+    );
+    const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000);
+    $("#e-title").textContent = ev
+      ? "Edit event"
+      : `New event for ${selectedDate.toLocaleDateString([], { month: "long", day: "numeric" })}`;
     $("#e-error").classList.remove("show");
     $("#f-title").value = ev ? ev.title : "";
     $("#f-type").value = ev ? ev.event_type : "class";
-    $("#f-start").value = ev ? toLocalInput(ev.starts_at) : "";
-    $("#f-end").value = ev && ev.ends_at ? toLocalInput(ev.ends_at) : "";
+    $("#f-start").value = ev ? toLocalInput(ev.starts_at) : toLocalInput(defaultStart);
+    $("#f-end").value = ev && ev.ends_at ? toLocalInput(ev.ends_at) : toLocalInput(defaultEnd);
     $("#f-location").value = ev ? ev.location || "" : "";
     $("#f-capacity").value = ev ? ev.volunteer_capacity : 2;
     $("#f-description").value = ev ? ev.description || "" : "";
@@ -167,22 +264,23 @@
     $("#f-title").focus();
   }
 
-  $("#event-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const err = $("#e-error");
-    err.classList.remove("show");
+  $("#event-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const errorBox = $("#e-error");
+    errorBox.classList.remove("show");
     const start = $("#f-start").value;
     const end = $("#f-end").value;
     if (!$("#f-title").value.trim() || !start || !end) {
-      err.textContent = "Title, start, and end are required.";
-      err.classList.add("show");
+      errorBox.textContent = "Title, start, and end are required.";
+      errorBox.classList.add("show");
       return;
     }
     if (new Date(end) <= new Date(start)) {
-      err.textContent = "The end time must be after the start time.";
-      err.classList.add("show");
+      errorBox.textContent = "The end time must be after the start time.";
+      errorBox.classList.add("show");
       return;
     }
+
     const data = {
       title: $("#f-title").value.trim(),
       event_type: $("#f-type").value,
@@ -192,6 +290,7 @@
       volunteer_capacity: Math.max(0, parseInt($("#f-capacity").value, 10) || 0),
       description: $("#f-description").value.trim(),
     };
+
     try {
       if (editingId) {
         await api.updateEvent(editingId, data);
@@ -200,45 +299,58 @@
         await api.createEvent(data);
         toast("Event added to the calendar.", "beak");
       }
+      const savedDate = new Date(data.starts_at);
+      selectedDate = new Date(savedDate.getFullYear(), savedDate.getMonth(), savedDate.getDate());
+      current = new Date(savedDate.getFullYear(), savedDate.getMonth(), 1);
       closeModals();
-      refresh();
-    } catch (ex) {
-      err.textContent = ex.message;
-      err.classList.add("show");
+      await refresh();
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.classList.add("show");
     }
   });
 
-  // ----------------------------------------------------------------- wiring
   function closeModals() {
-    document.querySelectorAll(".modal-backdrop").forEach((b) => b.classList.remove("open"));
+    document.querySelectorAll(".modal-backdrop").forEach((backdrop) => backdrop.classList.remove("open"));
   }
-  document.querySelectorAll("[data-close]").forEach((b) =>
-    b.addEventListener("click", closeModals)
+
+  document.querySelectorAll("[data-close]").forEach((button) =>
+    button.addEventListener("click", closeModals)
   );
-  document.querySelectorAll(".modal-backdrop").forEach((b) =>
-    b.addEventListener("click", (e) => {
-      if (e.target === b) closeModals();
+  document.querySelectorAll(".modal-backdrop").forEach((backdrop) =>
+    backdrop.addEventListener("click", (event) => {
+      if (event.target === backdrop) closeModals();
     })
   );
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModals();
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeModals();
   });
 
   $("#prev").addEventListener("click", () => {
-    current = new Date(current.getFullYear(), current.getMonth() - 1, 1);
-    render();
+    const target = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+    selectDate(target);
   });
   $("#next").addEventListener("click", () => {
-    current = new Date(current.getFullYear(), current.getMonth() + 1, 1);
-    render();
+    const target = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+    selectDate(target);
   });
   $("#new-event").addEventListener("click", () => openEditor(null));
+  $("#day-new-event").addEventListener("click", () => openEditor(null));
 
   document.addEventListener("DOMContentLoaded", async () => {
     try {
       user = await api.getSession();
-    } catch (e) {}
-    if (user && user.role === "admin") $("#new-event").hidden = false;
-    await refresh();
+    } catch (error) {
+      user = null;
+    }
+    if (user && user.role === "admin") {
+      $("#new-event").hidden = false;
+      $("#day-new-event").hidden = false;
+    }
+    try {
+      await refresh();
+    } catch (error) {
+      toast(error.message, "error");
+    }
   });
 })();
