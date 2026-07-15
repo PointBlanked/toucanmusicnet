@@ -9,10 +9,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js" defer></script>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=4" />
 </head>
 <body class="home-page">
-  <nav class="nav" data-site-nav></nav>
+  <nav class="nav" data-site-nav>
+    <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
+    <div class="nav-links">
+      <a class="nav-icon-link" href="index.html" aria-current="page" aria-label="Home" data-tooltip="Home"><iconify-icon icon="pixelarticons:home" aria-hidden="true"></iconify-icon></a>
+      <a class="nav-icon-link" href="calendar.html?v=2" aria-label="Calendar" data-tooltip="Calendar"><iconify-icon icon="pixelarticons:calendar" aria-hidden="true"></iconify-icon></a>
+      <span class="nav-auth" data-nav-auth>
+        <button class="nav-icon-button" type="button" data-open-settings aria-label="Settings" data-tooltip="Settings"><iconify-icon icon="pixelarticons:settings-cog" aria-hidden="true"></iconify-icon></button>
+        <a class="nav-icon-link" href="login.html" aria-label="Log in" data-tooltip="Log in"><iconify-icon icon="pixelarticons:login" aria-hidden="true"></iconify-icon></a>
+        <a class="btn btn-beak btn-sm nav-join" href="signup.html"><iconify-icon icon="pixelarticons:user-plus" aria-hidden="true"></iconify-icon>Join us</a>
+      </span>
+    </div>
+  </nav>
 
   <header class="hero">
     <div class="hero-copy">
@@ -47,60 +58,15 @@
     </section>
   </header>
 
-  <section class="section programs-section" id="programs">
-    <div class="section-intro">
-      <div><h2>Three ways to <span class="accent-coral">find your sound.</span></h2>
-      <p class="lede">No auditions, no rental fees, no fine print. Every program is free for students.</p></div>
+  <section class="home-summary">
+    <div>
+      <p class="eyebrow">Why Toucan Music</p>
+      <h2>Music education should not depend on what a family can afford.</h2>
+      <p>Classes, instruments, and performances are free. Students learn together, and neighborhood volunteers help keep every room welcoming and ready.</p>
     </div>
-    <div class="program-tracks">
-      <article class="program-track tilt">
-        <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:music"></iconify-icon></div>
-        <h3>After-school ensembles</h3>
-        <p>Small-group classes in strings, percussion, and voice, twice a week. Kids learn by playing together from day one.</p>
-      </article>
-      <article class="program-track tilt">
-        <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:book-open"></iconify-icon></div>
-        <h3>Instrument lending library</h3>
-        <p>Every student takes an instrument home for the season. Donated, repaired, and re-tuned by our volunteers.</p>
-      </article>
-      <article class="program-track tilt">
-        <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:mic"></iconify-icon></div>
-        <h3>Showcase nights</h3>
-        <p>Monthly performances for families and the neighborhood. The first stage most of our students ever stand on.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="section volunteer-section" id="volunteer">
-    <div class="section-intro">
-      <div><h2>Helping out has a <span class="accent-sky">clear rhythm.</span></h2>
-      <p class="lede">You don't have to be a musician. Each calendar entry shows exactly where helping hands are needed.</p></div>
-    </div>
-    <div class="volunteer-sequence">
-      <article class="volunteer-step tilt">
-        <h3>Make an account</h3>
-        <p>Sign up as a volunteer in under a minute. Students sign up the same way.</p>
-      </article>
-      <article class="volunteer-step tilt">
-        <h3>Pick from the calendar</h3>
-        <p>Open any class or event to see how many volunteer spots are left, and claim one.</p>
-      </article>
-      <article class="volunteer-step tilt">
-        <h3>Get reminded</h3>
-        <p>Choose weekly email, in-page reminders, or text notifications from the settings drawer.</p>
-      </article>
-    </div>
-  </section>
-
-  <section class="section final-section">
-    <div class="cta-band">
-      <iconify-icon class="cta-icon" icon="pixelarticons:calendar-check" aria-hidden="true"></iconify-icon>
-      <div class="cta-copy">
-        <h2>The next class is already <span class="accent-sun">on the calendar.</span></h2>
-        <p>Students grab a seat. Volunteers grab a spot. Learn why this work matters or find the next class.</p>
-        <a class="mission-link" href="mission.html">Read our mission</a>
-      </div>
-      <a class="btn btn-beak" href="calendar.html?v=2"><iconify-icon icon="pixelarticons:arrow-right" aria-hidden="true"></iconify-icon>Open the calendar</a>
+    <div class="home-summary-actions">
+      <a class="btn btn-beak" href="mission.html">Read our mission</a>
+      <a class="btn" href="signup.html">Join Toucan Music</a>
     </div>
   </section>
 
@@ -111,6 +77,6 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/tutorial.js"></script>
   <script src="js/background.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=4"></script>
 </body>
 </html>

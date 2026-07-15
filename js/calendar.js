@@ -75,11 +75,15 @@
     for (let day = 1; day <= days; day += 1) {
       const date = new Date(year, month, day);
       const dayEvents = eventsForDate(date);
-      const cell = element("div", "cal-cell");
+      const cell = element("button", "cal-cell");
+      cell.type = "button";
       if (sameDay(date, today)) cell.classList.add("today");
-      if (sameDay(date, selectedDate)) cell.classList.add("selected");
-      cell.setAttribute("role", "button");
-      cell.setAttribute("tabindex", "0");
+      if (sameDay(date, selectedDate)) {
+        cell.classList.add("selected");
+        cell.setAttribute("aria-pressed", "true");
+      } else {
+        cell.setAttribute("aria-pressed", "false");
+      }
       cell.setAttribute(
         "aria-label",
         `${date.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" })}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`
@@ -96,12 +100,6 @@
       });
 
       cell.addEventListener("click", () => selectDate(date));
-      cell.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          selectDate(date);
-        }
-      });
       grid.appendChild(cell);
     }
 

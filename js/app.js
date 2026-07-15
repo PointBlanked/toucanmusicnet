@@ -44,13 +44,15 @@
     const file = window.location.pathname.split("/").pop() || "index.html";
     const homeCurrent = file === "index.html" ? ' aria-current="page"' : "";
     const calendarCurrent = file === "calendar.html" ? ' aria-current="page"' : "";
+    const loginCurrent = file === "login.html" ? ' aria-current="page"' : "";
+    const signupCurrent = file === "signup.html" ? ' aria-current="page"' : "";
     const authMarkup = currentUser
       ? `<span class="nav-user">${escapeHtml(currentUser.name)} <em>${escapeHtml(currentUser.role)}</em></span>
          <button class="nav-icon-button" type="button" data-open-settings data-tour="nav-settings" aria-label="Settings" data-tooltip="Settings"><iconify-icon icon="pixelarticons:settings-cog" aria-hidden="true"></iconify-icon></button>
          <button class="nav-icon-button" type="button" data-logout aria-label="Log out" data-tooltip="Log out"><iconify-icon icon="pixelarticons:logout" aria-hidden="true"></iconify-icon></button>`
       : `<button class="nav-icon-button" type="button" data-open-settings data-tour="nav-settings" aria-label="Settings" data-tooltip="Settings"><iconify-icon icon="pixelarticons:settings-cog" aria-hidden="true"></iconify-icon></button>
-         <a class="nav-icon-link" href="login.html" aria-label="Log in" data-tooltip="Log in"><iconify-icon icon="pixelarticons:login" aria-hidden="true"></iconify-icon></a>
-         <a class="btn btn-beak btn-sm nav-join" href="signup.html"><iconify-icon icon="pixelarticons:user-plus" aria-hidden="true"></iconify-icon>Join us</a>`;
+         <a class="nav-icon-link" href="login.html" aria-label="Log in" data-tooltip="Log in"${loginCurrent}><iconify-icon icon="pixelarticons:login" aria-hidden="true"></iconify-icon></a>
+         <a class="btn btn-beak btn-sm nav-join" href="signup.html"${signupCurrent}><iconify-icon icon="pixelarticons:user-plus" aria-hidden="true"></iconify-icon>Join us</a>`;
 
     nav.innerHTML = `
       <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
@@ -336,7 +338,7 @@
 
     if (notificationList) {
       notificationList.innerHTML = "";
-      upcoming.slice(0, 2).forEach((event) => {
+      upcoming.slice(0, 1).forEach((event) => {
         const date = new Date(event.starts_at);
         const row = document.createElement("a");
         row.className = "notification-item";
