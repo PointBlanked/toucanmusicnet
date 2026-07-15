@@ -1,9 +1,9 @@
-// Event reminders — run every 5 minutes (see README.md). For each upcoming
-// class/event, emails opted-in users a nudge at two marks: 60 minutes and
-// 30 minutes before start ("an hour and thirty minutes before").
-// reminders_sent dedupes so each user gets each nudge once.
+// Event reminders - run every 5 minutes (see README.md). For each upcoming
+// class/event, opted-in users receive email and/or text nudges at 60 and 30
+// minutes before start. Each delivery channel is deduplicated independently.
 //
-// Secrets required: RESEND_API_KEY, FROM_EMAIL (same as weekly-digest).
+// Email secrets: RESEND_API_KEY, FROM_EMAIL (same as weekly-digest).
+// Text secrets: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -16,6 +16,9 @@ const supabase = createClient(
 
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
 const FROM = Deno.env.get("FROM_EMAIL") ?? "Toucan Music <onboarding@resend.dev>";
+const TWILIO_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+const TWILIO_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
 
 // Returns { ok, error } instead of swallowing failures — callers must not
 // count a message as sent unless Resend actually accepted it.
@@ -36,13 +39,26 @@ async function sendEmail(to: string, subject: string, html: string) {
   return { ok: true };
 }
 
-Deno.serve(async () => {
-  if (!RESEND_KEY) {
-    return new Response(
-      JSON.stringify({ sent: 0, error: "RESEND_API_KEY secret is not set." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+async function sendSms(to: string, body: string) {
+  if (!TWILIO_SID || !TWILIO_TOKEN || !TWILIO_FROM) {
+    return { ok: false, error: "Twilio secrets are not configured." };
   }
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${btoa(`${TWILIO_SID}:${TWILIO_TOKEN}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ To: to, From: TWILIO_FROM, Body: body }),
+    }
+  );
+  if (!res.ok) return { ok: false, error: await res.text() };
+  return { ok: true };
+}
+
+Deno.serve(async () => {
   const now = Date.now();
   const maxOffset = Math.max(...OFFSETS_MINUTES);
 
@@ -57,14 +73,14 @@ Deno.serve(async () => {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, class_reminders")
-    .eq("class_reminders", true);
+    .select("id, full_name, class_reminders, text_notifications, phone_number")
+    .or("class_reminders.eq.true,text_notifications.eq.true");
 
   const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 1000 });
   const emailById = new Map(userList.users.map((u) => [u.id, u.email]));
 
   let sent = 0;
-  const failures: { email: string; error: string }[] = [];
+  const failures: { channel: string; user_id: string; error: string }[] = [];
   for (const ev of events) {
     const minsUntil = (new Date(ev.starts_at).getTime() - now) / 60_000;
     // The offset this event currently qualifies for (largest first).
@@ -78,38 +94,50 @@ Deno.serve(async () => {
 
     for (const p of profiles ?? []) {
       const email = emailById.get(p.id);
-      if (!email) continue;
 
-      // Insert-first dedupe: primary key rejects repeats.
-      const { error: dupErr } = await supabase
-        .from("reminders_sent")
-        .insert({ event_id: ev.id, user_id: p.id, offset_minutes: offset });
-      if (dupErr) continue; // already sent this nudge
+      async function deliver(channel: "email" | "sms", send: () => Promise<{ ok: boolean; error?: string }>) {
+        const { error: dupErr } = await supabase.from("reminders_sent").insert({
+          event_id: ev.id,
+          user_id: p.id,
+          offset_minutes: offset,
+          channel,
+        });
+        if (dupErr) return;
+        const result = await send();
+        if (result.ok) {
+          sent++;
+          return;
+        }
+        failures.push({ channel, user_id: p.id, error: result.error ?? "Delivery failed." });
+        await supabase.from("reminders_sent").delete().match({
+          event_id: ev.id,
+          user_id: p.id,
+          offset_minutes: offset,
+          channel,
+        });
+      }
 
-      const result = await sendEmail(
-        email,
-        `Starting soon: ${ev.title} at ${when}`,
-        `<div style="font-family:Helvetica,Arial,sans-serif;color:#16282d;max-width:560px">
-          <h2 style="margin-bottom:4px">${ev.title} starts in about ${Math.round(minsUntil)} minutes</h2>
-          <p style="color:#46595e">${when}${ev.location ? " · " + ev.location : ""}</p>
-          ${ev.description ? `<p>${ev.description}</p>` : ""}
-          <p style="color:#46595e;font-size:13px;margin-top:20px">
-            Reminders can be turned off in your
-            <a href="https://your-site.example/settings.html">settings</a>.
-          </p>
-        </div>`
-      );
-      if (result.ok) {
-        sent++;
-      } else {
-        failures.push({ email, error: result.error! });
-        // The send failed but the dedupe row is already written; delete it
-        // so the next sweep (in 5 minutes) retries this user/event/offset
-        // instead of silently skipping them forever.
-        await supabase
-          .from("reminders_sent")
-          .delete()
-          .match({ event_id: ev.id, user_id: p.id, offset_minutes: offset });
+      if (p.class_reminders && email && RESEND_KEY) {
+        await deliver("email", () => sendEmail(
+          email,
+          `Starting soon: ${ev.title} at ${when}`,
+          `<div style="font-family:Helvetica,Arial,sans-serif;color:#16282d;max-width:560px">
+            <h2 style="margin-bottom:4px">${ev.title} starts in about ${Math.round(minsUntil)} minutes</h2>
+            <p style="color:#46595e">${when}${ev.location ? " - " + ev.location : ""}</p>
+            ${ev.description ? `<p>${ev.description}</p>` : ""}
+            <p style="color:#46595e;font-size:13px;margin-top:20px">
+              Reminders can be changed in your
+              <a href="https://your-site.example/index.html?settings=open">settings</a>.
+            </p>
+          </div>`
+        ));
+      }
+
+      if (p.text_notifications && p.phone_number) {
+        await deliver("sms", () => sendSms(
+          p.phone_number,
+          `Toucan Music: ${ev.title} starts at ${when}${ev.location ? ` at ${ev.location}` : ""}.`
+        ));
       }
     }
   }

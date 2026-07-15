@@ -9,7 +9,20 @@ create table if not exists public.profiles (
   role text not null default 'student' check (role in ('student', 'volunteer', 'admin')),
   weekly_digest boolean not null default true,
   class_reminders boolean not null default true,
+  text_notifications boolean not null default false,
+  phone_number text,
   created_at timestamptz not null default now()
+);
+
+alter table public.profiles add column if not exists text_notifications boolean not null default false;
+alter table public.profiles add column if not exists phone_number text;
+alter table public.profiles drop constraint if exists profiles_phone_number_format;
+alter table public.profiles add constraint profiles_phone_number_format check (
+  phone_number is null or phone_number ~ '^\+[1-9][0-9]{9,14}$'
+);
+alter table public.profiles drop constraint if exists profiles_text_notification_phone;
+alter table public.profiles add constraint profiles_text_notification_phone check (
+  not text_notifications or phone_number is not null
 );
 
 -- Profiles are created by the site on first login (Supabase no longer
@@ -91,15 +104,22 @@ create trigger check_volunteer_capacity
   before insert on public.volunteer_signups
   for each row execute function public.enforce_volunteer_capacity();
 
--- Dedupe table for reminder emails (so a reminder is sent once per
--- user/event/offset).
+-- Dedupe each delivery channel independently so an email failure does not
+-- prevent an SMS reminder, or vice versa.
 create table if not exists public.reminders_sent (
   event_id uuid not null references public.events (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
   offset_minutes int not null,
+  channel text not null default 'email' check (channel in ('email', 'sms')),
   sent_at timestamptz not null default now(),
-  primary key (event_id, user_id, offset_minutes)
+  primary key (event_id, user_id, offset_minutes, channel)
 );
+
+alter table public.reminders_sent add column if not exists channel text not null default 'email';
+alter table public.reminders_sent drop constraint if exists reminders_sent_channel_check;
+alter table public.reminders_sent add constraint reminders_sent_channel_check check (channel in ('email', 'sms'));
+alter table public.reminders_sent drop constraint if exists reminders_sent_pkey;
+alter table public.reminders_sent add primary key (event_id, user_id, offset_minutes, channel);
 
 -- --------------------------------------------------------------------- RLS
 alter table public.profiles enable row level security;

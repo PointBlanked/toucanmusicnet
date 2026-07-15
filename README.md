@@ -40,7 +40,8 @@ row-level policies in `supabase/schema.sql` for admin-only event changes.
 | `login.html` | Log in with email (the admin logs in with the name `admin`) |
 | `signup.html` | Create an account; choose **student** or **volunteer** |
 | `calendar.html` | Selectable month calendar with a full day-details panel. Everyone sees events; volunteers see spots left and can sign up; the admin creates, edits, and deletes events and sees who signed up |
-| `settings.html` | Per-user toggles: weekly schedule email, class reminders |
+| Settings drawer | Available from every page: weekly email, class reminders, text notifications, and the site guide |
+| `mission.html` | Mission statement, organization background, and community values; linked from the homepage and footer rather than the top navigation |
 
 ## Going live with Supabase
 
@@ -78,6 +79,13 @@ row-level policies in `supabase/schema.sql` for admin-only event changes.
    supabase secrets set RESEND_API_KEY=re_xxx FROM_EMAIL="Toucan Music <hello@yourdomain.org>"
    ```
 
+   For text reminders, add a Twilio number and set the SMS secrets used by
+   `event-reminders`:
+
+   ```sh
+   supabase secrets set TWILIO_ACCOUNT_SID=AC_xxx TWILIO_AUTH_TOKEN=xxx TWILIO_FROM_NUMBER=+15551234567
+   ```
+
 5. **Schedule them** with pg_cron (Dashboard → Database → Extensions → enable
    `pg_cron` and `pg_net`, then run — replace `PROJECT_REF` and the anon key):
 
@@ -112,5 +120,7 @@ row-level policies in `supabase/schema.sql` for admin-only event changes.
   on `volunteer_signups`, not just hidden in the UI.
 - **Capacity**: enforced by a locking trigger in Postgres; two volunteers
   racing for the last spot can't both get it.
-- Both emails honor the per-user toggles on the settings page
-  (`weekly_digest`, `class_reminders`).
+- Email and text delivery honor the per-user notification settings
+  (`weekly_digest`, `class_reminders`, `text_notifications`). Text reminders
+  require the Twilio secrets above; phone numbers and opt-in state are stored
+  on the user's protected profile row.

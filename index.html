@@ -12,14 +12,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="home-page">
-  <nav class="nav">
-    <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
-    <div class="nav-links">
-      <a class="nav-icon-link" href="index.html" aria-current="page" aria-label="Home" data-tooltip="Home"><iconify-icon icon="pixelarticons:home" aria-hidden="true"></iconify-icon></a>
-      <a class="nav-icon-link" href="calendar.html?v=2" aria-label="Calendar" data-tooltip="Calendar"><iconify-icon icon="pixelarticons:calendar" aria-hidden="true"></iconify-icon></a>
-      <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
-    </div>
-  </nav>
+  <nav class="nav" data-site-nav></nav>
 
   <header class="hero">
     <div class="hero-copy">
@@ -32,36 +25,45 @@
       </div>
     </div>
 
-    <aside class="weekly-set rise" aria-label="Music programs this week">
-      <div class="set-label"><span>Playing this week</span><iconify-icon icon="pixelarticons:music" aria-hidden="true"></iconify-icon></div>
-      <div class="set-line"><span>01</span><strong>Strings together</strong><small>After school</small></div>
-      <div class="set-line"><span>02</span><strong>Rhythm lab</strong><small>Open circle</small></div>
-      <div class="set-line"><span>03</span><strong>Voices up</strong><small>All levels</small></div>
-      <p>Instruments included. No auditions. <strong>Always free.</strong></p>
+    <aside class="notification-board rise" aria-label="Upcoming notifications">
+      <div class="notification-board-head">
+        <iconify-icon icon="pixelarticons:bell-ring" aria-hidden="true"></iconify-icon>
+        <div><p>Upcoming notifications</p><h2>Your next reminders</h2></div>
+      </div>
+      <div class="upcoming-notification-list" id="upcoming-notification-list" aria-live="polite">
+        <p>Loading the next classes...</p>
+      </div>
+      <button class="btn btn-quiet" type="button" data-open-settings>Manage notifications</button>
     </aside>
+
+    <section class="event-gallery-shell rise" aria-labelledby="upcoming-title">
+      <div class="event-gallery-head">
+        <div><p class="eyebrow">Coming up</p><h2 id="upcoming-title">Classes and events <span class="accent-sky">worth showing up for.</span></h2></div>
+        <a href="calendar.html?v=2">View the full calendar <iconify-icon icon="pixelarticons:arrow-right" aria-hidden="true"></iconify-icon></a>
+      </div>
+      <div class="event-gallery" id="upcoming-gallery" aria-live="polite">
+        <p>Loading upcoming events...</p>
+      </div>
+    </section>
   </header>
 
   <section class="section programs-section" id="programs">
     <div class="section-intro">
-      <p class="section-index">01 / The program</p>
       <div><h2>Three ways to <span class="accent-coral">find your sound.</span></h2>
       <p class="lede">No auditions, no rental fees, no fine print. Every program is free for students.</p></div>
     </div>
     <div class="program-tracks">
       <article class="program-track tilt">
-        <span class="track-number">01</span>
         <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:music"></iconify-icon></div>
         <h3>After-school ensembles</h3>
         <p>Small-group classes in strings, percussion, and voice, twice a week. Kids learn by playing together from day one.</p>
       </article>
       <article class="program-track tilt">
-        <span class="track-number">02</span>
         <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:book-open"></iconify-icon></div>
         <h3>Instrument lending library</h3>
         <p>Every student takes an instrument home for the season. Donated, repaired, and re-tuned by our volunteers.</p>
       </article>
       <article class="program-track tilt">
-        <span class="track-number">03</span>
         <div class="glyph pixel-glyph" aria-hidden="true"><iconify-icon icon="pixelarticons:mic"></iconify-icon></div>
         <h3>Showcase nights</h3>
         <p>Monthly performances for families and the neighborhood. The first stage most of our students ever stand on.</p>
@@ -71,25 +73,21 @@
 
   <section class="section volunteer-section" id="volunteer">
     <div class="section-intro">
-      <p class="section-index">02 / Join the room</p>
       <div><h2>Helping out has a <span class="accent-sky">clear rhythm.</span></h2>
       <p class="lede">You don't have to be a musician. Each calendar entry shows exactly where helping hands are needed.</p></div>
     </div>
     <div class="volunteer-sequence">
       <article class="volunteer-step tilt">
-        <div class="glyph">01</div>
         <h3>Make an account</h3>
         <p>Sign up as a volunteer in under a minute. Students sign up the same way.</p>
       </article>
       <article class="volunteer-step tilt">
-        <div class="glyph">02</div>
         <h3>Pick from the calendar</h3>
         <p>Open any class or event to see how many volunteer spots are left, and claim one.</p>
       </article>
       <article class="volunteer-step tilt">
-        <div class="glyph">03</div>
         <h3>Get reminded</h3>
-        <p>A weekly email with what's coming up, plus a nudge an hour and thirty minutes before each class. Adjustable in your settings.</p>
+        <p>Choose weekly email, in-page reminders, or text notifications from the settings drawer.</p>
       </article>
     </div>
   </section>
@@ -98,22 +96,20 @@
     <div class="cta-band">
       <iconify-icon class="cta-icon" icon="pixelarticons:calendar-check" aria-hidden="true"></iconify-icon>
       <div class="cta-copy">
-        <p class="section-index">Ready when you are</p>
         <h2>The next class is already <span class="accent-sun">on the calendar.</span></h2>
-        <p>Students grab a seat. Volunteers grab a spot. Either way, you're in the room where it happens.</p>
+        <p>Students grab a seat. Volunteers grab a spot. Learn why this work matters or find the next class.</p>
+        <a class="mission-link" href="mission.html">Read our mission</a>
       </div>
       <a class="btn btn-beak" href="calendar.html?v=2"><iconify-icon icon="pixelarticons:arrow-right" aria-hidden="true"></iconify-icon>Open the calendar</a>
     </div>
   </section>
 
-  <footer class="footer">
-    <span>© 2026 Toucan Music · a 501(c)(3) nonprofit</span>
-    <span>hello@toucanmusic.org</span>
-  </footer>
+  <footer data-site-footer></footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/api.js?v=2"></script>
+  <script src="js/tutorial.js"></script>
   <script src="js/background.js"></script>
   <script src="js/app.js"></script>
 </body>

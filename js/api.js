@@ -34,6 +34,8 @@
           role: "admin",
           weekly_digest: true,
           class_reminders: true,
+          text_notifications: false,
+          phone_number: null,
         },
         {
           id: "vol-1",
@@ -242,6 +244,8 @@
       role: u.role,
       weekly_digest: u.weekly_digest,
       class_reminders: u.class_reminders,
+      text_notifications: u.text_notifications,
+      phone_number: u.phone_number,
     };
   }
 
@@ -297,6 +301,8 @@
           role,
           weekly_digest: true,
           class_reminders: true,
+          text_notifications: false,
+          phone_number: null,
         };
         db.users.push(u);
         saveDb(db);
@@ -309,7 +315,7 @@
         options: { data: { full_name: name, role } },
       });
       if (error) throw new Error(error.message);
-      return publicUser({ id: data.user.id, name, email, role, weekly_digest: true, class_reminders: true });
+      return publicUser({ id: data.user.id, name, email, role, weekly_digest: true, class_reminders: true, text_notifications: false, phone_number: null });
     },
 
     async logout() {
@@ -320,7 +326,7 @@
       await sb.auth.signOut();
     },
 
-    async updatePrefs({ weekly_digest, class_reminders }) {
+    async updatePrefs({ weekly_digest, class_reminders, text_notifications, phone_number }) {
       if (DEMO) {
         const raw = localStorage.getItem(SESSION_KEY);
         if (!raw) throw new Error("Not logged in.");
@@ -329,15 +335,21 @@
         const u = db.users.find((u) => u.id === userId);
         u.weekly_digest = weekly_digest;
         u.class_reminders = class_reminders;
+        u.text_notifications = text_notifications;
+        u.phone_number = phone_number || null;
         saveDb(db);
         return publicUser(u);
       }
       const { data: s } = await sb.auth.getSession();
-      const { error } = await sb
+      if (!s.session) throw new Error("Log in to update notification settings.");
+      const { data: updated, error } = await sb
         .from("profiles")
-        .update({ weekly_digest, class_reminders })
-        .eq("id", s.session.user.id);
+        .update({ weekly_digest, class_reminders, text_notifications, phone_number: phone_number || null })
+        .eq("id", s.session.user.id)
+        .select()
+        .single();
       if (error) throw new Error(error.message);
+      return publicUser({ ...updated, email: s.session.user.email });
     },
 
     // ------------------------------------------------------------- events

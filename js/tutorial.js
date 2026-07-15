@@ -98,7 +98,7 @@
           element: "[data-tour='nav-settings']",
           popover: {
             title: "Preferences and help",
-            description: "Settings controls reminders and weekly email. You can also replay this guide there.",
+            description: "The settings drawer controls weekly email, class reminders, and text notifications. You can also replay this guide there.",
             side: "bottom",
           },
         },

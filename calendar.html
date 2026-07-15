@@ -12,14 +12,7 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <nav class="nav">
-    <a class="brand" href="index.html"><span class="brand-beak"></span>Toucan Music</a>
-    <div class="nav-links">
-      <a class="nav-icon-link" href="index.html" aria-label="Home" data-tooltip="Home"><iconify-icon icon="pixelarticons:home" aria-hidden="true"></iconify-icon></a>
-      <a class="nav-icon-link" href="calendar.html?v=2" aria-current="page" aria-label="Calendar" data-tooltip="Calendar"><iconify-icon icon="pixelarticons:calendar" aria-hidden="true"></iconify-icon></a>
-      <span data-nav-auth style="display:flex;gap:1rem;align-items:center"></span>
-    </div>
-  </nav>
+  <nav class="nav" data-site-nav></nav>
 
   <main class="cal-page">
     <div class="cal-head rise">
@@ -101,6 +94,8 @@
       </form>
     </div>
   </div>
+
+  <footer data-site-footer></footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/config.js"></script>
